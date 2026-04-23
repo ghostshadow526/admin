@@ -1,0 +1,20 @@
+{
+  "buildCommand": "npm install --prefix backend",
+  "devCommand": "npm run dev --prefix backend",
+  "installCommand": "npm install && npm install --prefix backend",
+  "env": {
+    "FIREBASE_PROJECT_ID": "@firebase_project_id",
+    "FIREBASE_PRIVATE_KEY_ID": "@firebase_private_key_id",
+    "FIREBASE_PRIVATE_KEY": "@firebase_private_key",
+    "FIREBASE_CLIENT_EMAIL": "@firebase_client_email",
+    "FIREBASE_CLIENT_ID": "@firebase_client_id",
+    "FIREBASE_CLIENT_X509_CERT_URL": "@firebase_client_x509_cert_url",
+    "FIREBASE_DATABASE_URL": "@firebase_database_url"
+  },
+  "functions": {
+    "backend/api/index.js": {
+      "memory": 512,
+      "maxDuration": 30
+    }
+  }
+}

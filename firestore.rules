@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Users
+    match /users/{userId} {
+      // No roles/upgrades: any signed-in account can read the user list.
+      allow read: if isSignedIn();
+
+      // Only the owner can create/update their own user document.
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // Admin invites (if used)
+    match /admin-invites/{inviteId} {
+      allow read, write: if isSignedIn();
+    }
+
+    // Gallery: public can read (view images), but only admins can write (upload images)
+    match /gallery/{imageId} {
+      // Public gallery: anyone can view.
+      allow read: if true;
+
+      // Client writes disabled (uploads/creates should go through the backend).
+      allow write: if false;
+    }
+
+    // Buy Rice listings (products)
+    match /buy-rice/{listingId} {
+      // Allow client-side viewing (public).
+      allow read: if true;
+
+      // Client writes disabled (creates/deletes should go through the backend).
+      allow write: if false;
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
