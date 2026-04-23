@@ -1,11 +1,15 @@
 {
-  "buildCommand": "npm install --prefix backend",
-  "devCommand": "npm run dev --prefix backend",
-  "installCommand": "npm install && npm install --prefix backend",
-  "functions": {
-    "backend/api/index.js": {
-      "memory": 512,
-      "maxDuration": 30
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/api/index.js",
+      "use": "@vercel/node"
     }
-  }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "backend/api/index.js"
+    }
+  ]
 }
