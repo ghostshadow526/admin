@@ -147,11 +147,31 @@ const ensureFirebase = async () => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  const requiredFirebaseEnv = [
+    'FIREBASE_PROJECT_ID',
+    'FIREBASE_PRIVATE_KEY_ID',
+    'FIREBASE_PRIVATE_KEY',
+    'FIREBASE_CLIENT_EMAIL',
+    'FIREBASE_CLIENT_ID',
+    'FIREBASE_CLIENT_X509_CERT_URL',
+  ];
+  const missingFirebaseEnv = requiredFirebaseEnv.filter((k) => !process.env[k] || String(process.env[k]).trim().length === 0);
+
+  const requiredImageKitEnv = ['IMAGEKIT_PUBLIC_KEY', 'IMAGEKIT_PRIVATE_KEY'];
+  const missingImageKitEnv = requiredImageKitEnv.filter((k) => !process.env[k] || String(process.env[k]).trim().length === 0);
+
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     firestoreDatabaseId: firestoreDatabaseId || '(default)',
     imagekitConfigured: Boolean(process.env.IMAGEKIT_PUBLIC_KEY) && Boolean(process.env.IMAGEKIT_PRIVATE_KEY),
+    env: {
+      hasFirebaseProjectId: Boolean(process.env.FIREBASE_PROJECT_ID),
+      missingFirebaseEnv,
+      missingImageKitEnv,
+      vercel: Boolean(process.env.VERCEL),
+      nodeEnv: process.env.NODE_ENV || null,
+    },
   });
 });
 
