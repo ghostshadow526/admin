@@ -42,6 +42,20 @@ let firebaseInitError;
 const initializeFirebase = async () => {
   // Try to use environment variables first (for Vercel)
   if (process.env.FIREBASE_PROJECT_ID) {
+    const requiredEnv = [
+      'FIREBASE_PROJECT_ID',
+      'FIREBASE_PRIVATE_KEY_ID',
+      'FIREBASE_PRIVATE_KEY',
+      'FIREBASE_CLIENT_EMAIL',
+      'FIREBASE_CLIENT_ID',
+      'FIREBASE_CLIENT_X509_CERT_URL',
+    ];
+
+    const missing = requiredEnv.filter((k) => !process.env[k] || String(process.env[k]).trim().length === 0);
+    if (missing.length) {
+      throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+    }
+
     const credential = {
       type: 'service_account',
       project_id: process.env.FIREBASE_PROJECT_ID,
