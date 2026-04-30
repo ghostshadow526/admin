@@ -18,21 +18,26 @@ import {
 } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
-// Import Firebase config
+import appletConfig from '../firebase-applet-config.json';
 
-// Firebase config from environment variables
+const env = import.meta.env;
+
+// Prefer Vercel/build-time env vars, fallback to repo config.
+// (Firebase Web apiKey is not a secret; it must be present client-side.)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: env.VITE_FIREBASE_API_KEY || appletConfig.apiKey,
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain,
+  projectId: env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId,
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket,
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId,
+  appId: env.VITE_FIREBASE_APP_ID || appletConfig.appId,
 };
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, import.meta.env.VITE_FIREBASE_DATABASE_ID);
+
+const firestoreDatabaseId = env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId;
+export const db = firestoreDatabaseId ? getFirestore(app, firestoreDatabaseId) : getFirestore(app);
 export const functions = getFunctions(app, 'us-central1');
 
 export const getImagekitAuth = httpsCallable<unknown, {
