@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { auth } from '../firebase';
-import { withBackend } from '../api/backend';
+import { readJson, withBackend } from '../api/backend';
 
 interface AdminPageProps {
 	onNavigate?: (page: 'dashboard' | 'admins' | 'gallery') => void;
@@ -45,7 +45,7 @@ export default function CreateAdminPage({ onNavigate }: AdminPageProps) {
 				body: JSON.stringify({ email, password, displayName }),
 			});
 
-			const data = await response.json();
+			const data = await readJson<any>(response);
 			if (!response.ok) {
 				throw new Error(data?.message || 'Failed to create admin');
 			}

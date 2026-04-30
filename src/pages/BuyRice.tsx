@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { auth } from '../firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { withBackend } from '../api/backend';
+import { readJson, withBackend } from '../api/backend';
 
 type RiceListing = {
   id: string;
@@ -53,7 +53,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
     const response = await fetch(withBackend('/api/buy-rice/public'), {
       method: 'GET',
     });
-    const data = await response.json();
+    const data = await readJson<any>(response);
     if (!response.ok) {
       throw new Error(data?.message || 'Failed to load listings');
     }
@@ -94,7 +94,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
       },
     });
 
-    const authPayload = await authRes.json();
+    const authPayload = await readJson<any>(authRes);
     if (!authRes.ok) {
       throw new Error(authPayload?.message || 'Failed to get ImageKit upload credentials');
     }
@@ -139,7 +139,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
       },
       body: JSON.stringify({ imageUrl, description: nextDescription, price: nextPrice }),
     });
-    const data = await response.json();
+    const data = await readJson<any>(response);
     if (!response.ok) {
       throw new Error(data?.message || 'Failed to create listing');
     }
@@ -190,7 +190,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
         Authorization: `Bearer ${token}`,
       },
     });
-    const data = await response.json();
+    const data = await readJson<any>(response);
     if (!response.ok) {
       throw new Error(data?.message || 'Failed to delete listing');
     }

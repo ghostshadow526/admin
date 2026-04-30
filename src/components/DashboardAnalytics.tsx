@@ -10,7 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { auth } from '../firebase';
-import { withBackend } from '../api/backend';
+import { readJson, withBackend } from '../api/backend';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -48,7 +48,7 @@ export default function DashboardAnalytics() {
           },
         });
 
-        const payload = (await response.json()) as (AnalyticsResponse & { message?: string }) | null;
+        const payload = await readJson<AnalyticsResponse & { message?: string }>(response);
         if (!response.ok || !payload?.success) {
           throw new Error(payload?.message || 'Failed to load analytics');
         }

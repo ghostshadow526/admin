@@ -4,7 +4,7 @@ import {
   auth,
 } from '../firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
-import { withBackend } from '../api/backend';
+import { readJson, withBackend } from '../api/backend';
 
 type GalleryItem = {
   id: string;
@@ -50,7 +50,7 @@ export default function GalleryPage({ currentEmail }: GalleryPageProps) {
     const response = await fetch(withBackend('/api/gallery/public'), {
       method: 'GET',
     });
-    const data = await response.json();
+    const data = await readJson<any>(response);
     if (!response.ok) {
       throw new Error(data?.message || 'Failed to load gallery');
     }
@@ -74,7 +74,7 @@ export default function GalleryPage({ currentEmail }: GalleryPageProps) {
         Authorization: `Bearer ${token}`,
       },
     });
-    const data = await response.json();
+    const data = await readJson<any>(response);
     if (!response.ok) {
       throw new Error(data?.message || 'Failed to delete image');
     }
@@ -105,7 +105,7 @@ export default function GalleryPage({ currentEmail }: GalleryPageProps) {
       },
       body: JSON.stringify({}),
     });
-    const signingData = await signingResponse.json();
+    const signingData = await readJson<any>(signingResponse);
     if (!signingResponse.ok) {
       throw new Error(signingData?.message || 'Failed to sign upload');
     }
@@ -147,7 +147,7 @@ export default function GalleryPage({ currentEmail }: GalleryPageProps) {
       },
       body: JSON.stringify({ url }),
     });
-    const data = await response.json();
+    const data = await readJson<any>(response);
     if (!response.ok) {
       throw new Error(data?.message || 'Failed to save URL');
     }

@@ -36,67 +36,75 @@ app.use(express.json());
 let adminApp;
 let firestoreDb;
 let firestoreDatabaseId;
+let firebaseInitPromise;
+let firebaseInitError;
 
-const initializeFirebase = () => {
-  try {
-    // Try to use environment variables first (for Vercel)
-    if (process.env.FIREBASE_PROJECT_ID) {
-      const credential = {
-        type: 'service_account',
-        project_id: process.env.FIREBASE_PROJECT_ID,
-        private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-        private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        client_email: process.env.FIREBASE_CLIENT_EMAIL,
-        client_id: process.env.FIREBASE_CLIENT_ID,
-        auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_uri: 'https://oauth2.googleapis.com/token',
-        auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
-        client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
-      };
+const initializeFirebase = async () => {
+  // Try to use environment variables first (for Vercel)
+  if (process.env.FIREBASE_PROJECT_ID) {
+    const credential = {
+      type: 'service_account',
+      project_id: process.env.FIREBASE_PROJECT_ID,
+      private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
+      private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      client_email: process.env.FIREBASE_CLIENT_EMAIL,
+      client_id: process.env.FIREBASE_CLIENT_ID,
+      auth_uri: 'https://accounts.google.com/o/oauth2/auth',
+      token_uri: 'https://oauth2.googleapis.com/token',
+      auth_provider_x509_cert_url: 'https://www.googleapis.com/oauth2/v1/certs',
+      client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+    };
 
-      adminApp = admin.initializeApp({
-        credential: admin.credential.cert(credential),
-        databaseURL: process.env.FIREBASE_DATABASE_URL,
+    adminApp = admin.apps?.length ? admin.app() : admin.initializeApp({
+      credential: admin.credential.cert(credential),
+      databaseURL: process.env.FIREBASE_DATABASE_URL,
+    });
+  } else {
+    // Fallback: try to load from service account file (local/dev)
+    const serviceAccountPath = path.join(__dirname, '../../firebase-service-account.json');
+    if (fs.existsSync(serviceAccountPath)) {
+      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      adminApp = admin.apps?.length ? admin.app() : admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
       });
     } else {
-      // Fallback: try to load from service account file
-      const serviceAccountPath = path.join(__dirname, '../../firebase-service-account.json');
-      if (fs.existsSync(serviceAccountPath)) {
-        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
-        adminApp = admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-        });
-      } else {
-        throw new Error('Firebase credentials not found. Set environment variables or provide firebase-service-account.json');
-      }
+      throw new Error(
+        'Firebase credentials not found. Set FIREBASE_* env vars (Vercel) or provide firebase-service-account.json (local).'
+      );
     }
+  }
 
-    console.log('✓ Firebase Admin SDK initialized');
-
-    // Load databaseId from the same config the frontend uses (unless overridden by env)
-    const appletConfigPath = path.join(__dirname, '../../firebase-applet-config.json');
-    if (fs.existsSync(appletConfigPath)) {
-      try {
-        const cfg = JSON.parse(fs.readFileSync(appletConfigPath, 'utf8'));
-        firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || cfg?.firestoreDatabaseId;
-      } catch {
-        firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID;
-      }
-    } else {
+  // Load databaseId from the same config the frontend uses (unless overridden by env)
+  const appletConfigPath = path.join(__dirname, '../../firebase-applet-config.json');
+  if (fs.existsSync(appletConfigPath)) {
+    try {
+      const cfg = JSON.parse(fs.readFileSync(appletConfigPath, 'utf8'));
+      firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || cfg?.firestoreDatabaseId;
+    } catch {
       firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID;
     }
-
-    firestoreDb = firestoreDatabaseId
-      ? getFirestore(adminApp, firestoreDatabaseId)
-      : getFirestore(adminApp);
-  } catch (error) {
-    console.error('Failed to initialize Firebase:', error.message);
-    process.exit(1);
+  } else {
+    firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID;
   }
+
+  firestoreDb = firestoreDatabaseId ? getFirestore(adminApp, firestoreDatabaseId) : getFirestore(adminApp);
+
+  console.log('✓ Firebase Admin SDK initialized');
 };
 
-// Initialize Firebase on startup
-initializeFirebase();
+const ensureFirebase = async () => {
+  if (firestoreDb && adminApp) return;
+  if (firebaseInitError) throw firebaseInitError;
+  if (!firebaseInitPromise) {
+    firebaseInitPromise = (async () => {
+      await initializeFirebase();
+    })().catch((err) => {
+      firebaseInitError = err instanceof Error ? err : new Error(String(err));
+      throw firebaseInitError;
+    });
+  }
+  await firebaseInitPromise;
+};
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -106,6 +114,23 @@ app.get('/api/health', (req, res) => {
     firestoreDatabaseId: firestoreDatabaseId || '(default)',
     imagekitConfigured: Boolean(process.env.IMAGEKIT_PUBLIC_KEY) && Boolean(process.env.IMAGEKIT_PRIVATE_KEY),
   });
+});
+
+// Ensure Firebase is initialized for API routes (except health)
+app.use('/api', async (req, res, next) => {
+  if (req.path === '/health') return next();
+  try {
+    await ensureFirebase();
+    return next();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('Failed to initialize Firebase for request:', message);
+    return res.status(500).json({
+      success: false,
+      message: 'Server misconfigured: Firebase Admin SDK failed to initialize',
+      detail: message,
+    });
+  }
 });
 
 const getBearerToken = (req) => {
