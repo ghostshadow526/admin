@@ -26,6 +26,7 @@ console.log(
   }`
 );
 const app = express();
+app.disable('x-powered-by');
 
 // Middleware
 app.use(cors());
@@ -474,13 +475,18 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`✓ Backend server running on port ${PORT}`);
-  console.log(`  Health check: http://localhost:${PORT}/api/health`);
-  console.log(`  Create admin: POST http://localhost:${PORT}/api/create-admin`);
-  console.log(`  ImageKit auth: POST http://localhost:${PORT}/api/imagekit-auth`);
-  console.log(`  Gallery list:  GET  http://localhost:${PORT}/api/gallery`);
-  console.log(`  Gallery add:   POST http://localhost:${PORT}/api/gallery`);
-});
+// Vercel serverless: export the Express app (no listening)
+export default app;
+
+// Local dev: start server
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`✓ Backend server running on port ${PORT}`);
+    console.log(`  Health check: http://localhost:${PORT}/api/health`);
+    console.log(`  Create admin: POST http://localhost:${PORT}/api/create-admin`);
+    console.log(`  ImageKit auth: POST http://localhost:${PORT}/api/imagekit-auth`);
+    console.log(`  Gallery list:  GET  http://localhost:${PORT}/api/gallery`);
+    console.log(`  Gallery add:   POST http://localhost:${PORT}/api/gallery`);
+  });
+}
