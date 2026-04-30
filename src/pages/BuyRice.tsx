@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { auth } from '../firebase';
 import { onAuthStateChanged, type User } from 'firebase/auth';
+import { withBackend } from '../api/backend';
 
 type RiceListing = {
   id: string;
@@ -22,10 +23,6 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
-
-  const backendUrl = useMemo(() => {
-    return (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:3001';
-  }, []);
 
   const waitForUser = async () => {
     if (auth.currentUser) return auth.currentUser;
@@ -53,7 +50,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
   };
 
   const fetchListings = async () => {
-    const response = await fetch(`${backendUrl}/api/buy-rice/public`, {
+    const response = await fetch(withBackend('/api/buy-rice/public'), {
       method: 'GET',
     });
     const data = await response.json();
@@ -86,11 +83,11 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
         setLoading(false);
       }
     })();
-  }, [backendUrl]);
+  }, []);
 
   const uploadToImageKit = async (file: File) => {
     const idToken = await getToken();
-    const authRes = await fetch(`${backendUrl}/api/imagekit-auth`, {
+    const authRes = await fetch(withBackend('/api/imagekit-auth'), {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${idToken}`,
@@ -134,7 +131,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
 
   const createListing = async (imageUrl: string, nextDescription: string, nextPrice: number) => {
     const token = await getToken();
-    const response = await fetch(`${backendUrl}/api/buy-rice`, {
+    const response = await fetch(withBackend('/api/buy-rice'), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -187,7 +184,7 @@ export default function BuyRicePage({ onNavigate }: BuyRicePageProps) {
     if (!ok) return;
 
     const token = await getToken();
-    const response = await fetch(`${backendUrl}/api/buy-rice/${encodeURIComponent(id)}`, {
+    const response = await fetch(withBackend(`/api/buy-rice/${encodeURIComponent(id)}`), {
       method: 'DELETE',
       headers: {
         Authorization: `Bearer ${token}`,

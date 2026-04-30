@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { toast } from 'sonner';
 import { auth } from '../firebase';
+import { withBackend } from '../api/backend';
 
 interface AdminPageProps {
 	onNavigate?: (page: 'dashboard' | 'admins' | 'gallery') => void;
@@ -35,8 +36,7 @@ export default function CreateAdminPage({ onNavigate }: AdminPageProps) {
 			}
 			const token = await user.getIdToken();
 
-			const backendUrl = (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:3001';
-			const response = await fetch(`${backendUrl}/api/create-admin`, {
+			const response = await fetch(withBackend('/api/create-admin'), {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

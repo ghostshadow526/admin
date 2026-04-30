@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,6 +10,7 @@ import {
   Legend,
 } from 'chart.js';
 import { auth } from '../firebase';
+import { withBackend } from '../api/backend';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -27,10 +28,6 @@ export default function DashboardAnalytics() {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const backendUrl = useMemo(() => {
-    return (import.meta.env.VITE_BACKEND_URL as string) || 'http://localhost:3001';
-  }, []);
-
   useEffect(() => {
     (async () => {
       try {
@@ -44,13 +41,14 @@ export default function DashboardAnalytics() {
         }
 
         const token = await user.getIdToken();
-        const response = await fetch(`${backendUrl}/api/analytics?days=14`, {
+        const response = await fetch(withBackend('/api/analytics?days=14'), {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,
           },
         });
-        const payload = (await response.json()) as AnalyticsResponse & { message?: string };
+
+        const payload = (await response.json()) as (AnalyticsResponse & { message?: string }) | null;
         if (!response.ok || !payload?.success) {
           throw new Error(payload?.message || 'Failed to load analytics');
         }
@@ -63,7 +61,7 @@ export default function DashboardAnalytics() {
         setLoading(false);
       }
     })();
-  }, [backendUrl]);
+  }, []);
 
   if (loading) {
     return (
@@ -128,8 +126,12 @@ export default function DashboardAnalytics() {
         <div className="card flex-fill">
           <div className="card-body">
             <h5 className="card-title">Totals</h5>
-            <div className="mb-2">Users: <strong>{data.usersTotal}</strong></div>
-            <div>Payments total: <strong>${Number(data.paymentsTotal || 0).toFixed(2)}</strong></div>
+            <div className="mb-2">
+              Users: <strong>{data.usersTotal}</strong>
+            </div>
+            <div>
+              Payments total: <strong>${Number(data.paymentsTotal || 0).toFixed(2)}</strong>
+            </div>
           </div>
         </div>
       </div>
