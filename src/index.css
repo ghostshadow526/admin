@@ -25,7 +25,3 @@ code {
   vertical-align: -0.125em;
 }
 
-svg:not([data-feather]) {
-  display: none;
-}
-

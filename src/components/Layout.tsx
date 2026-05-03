@@ -1,4 +1,4 @@
-import { ReactNode, useEffect } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { LogOut, Settings, User } from 'lucide-react';
 import feather from 'feather-icons';
 
@@ -11,6 +11,40 @@ interface LayoutProps {
 }
 
 export default function Layout({ children, currentEmail, onLogout, onPageChange, currentPage }: LayoutProps) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 991.98px)').matches;
+  });
+
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return !window.matchMedia('(max-width: 991.98px)').matches;
+  });
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 991.98px)');
+    const handler = (e: MediaQueryListEvent) => {
+      setIsMobile(e.matches);
+    };
+
+    setIsMobile(media.matches);
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', handler);
+      return () => media.removeEventListener('change', handler);
+    }
+
+    // Legacy fallback (older Safari)
+    (media as any).addListener(handler);
+    return () => (media as any).removeListener(handler);
+  }, []);
+
+  const sidebarHasCollapsedClass = useMemo(() => {
+    // In AdminKit CSS:
+    // - Desktop: `.sidebar.collapsed` hides it.
+    // - Mobile:  `.sidebar` is hidden by default, and `.sidebar.collapsed` shows it.
+    return isMobile ? isSidebarOpen : !isSidebarOpen;
+  }, [isMobile, isSidebarOpen]);
+
   useEffect(() => {
     const rafId = window.requestAnimationFrame(() => {
       try {
@@ -21,12 +55,17 @@ export default function Layout({ children, currentEmail, onLogout, onPageChange,
     });
 
     return () => window.cancelAnimationFrame(rafId);
-  });
+  }, [currentPage, sidebarHasCollapsedClass]);
+
+  const navigate = (page: 'dashboard' | 'admins' | 'gallery' | 'buy-rice') => {
+    onPageChange?.(page);
+    if (isMobile) setIsSidebarOpen(false);
+  };
 
   return (
     <div className="wrapper">
       {/* Sidebar */}
-      <nav id="sidebar" className="sidebar js-sidebar">
+      <nav id="sidebar" className={`sidebar js-sidebar${sidebarHasCollapsedClass ? ' collapsed' : ''}`}>
         <div className="sidebar-content js-simplebar">
           <a className="sidebar-brand" href="#/">
             <span className="align-middle">AdminKit</span>
@@ -41,7 +80,7 @@ export default function Layout({ children, currentEmail, onLogout, onPageChange,
                 href="#/" 
                 onClick={(e) => {
                   e.preventDefault();
-                  onPageChange?.('dashboard');
+                  navigate('dashboard');
                 }}
               >
                 <i className="align-middle" data-feather="sliders"></i>{' '}
@@ -55,7 +94,7 @@ export default function Layout({ children, currentEmail, onLogout, onPageChange,
                 href="#/" 
                 onClick={(e) => {
                   e.preventDefault();
-                  onPageChange?.('admins');
+                  navigate('admins');
                 }}
               >
                 <i className="align-middle" data-feather="shield"></i>{' '}
@@ -69,7 +108,7 @@ export default function Layout({ children, currentEmail, onLogout, onPageChange,
                 href="#/" 
                 onClick={(e) => {
                   e.preventDefault();
-                  onPageChange?.('gallery');
+                  navigate('gallery');
                 }}
               >
                 <i className="align-middle" data-feather="image"></i>{' '}
@@ -83,7 +122,7 @@ export default function Layout({ children, currentEmail, onLogout, onPageChange,
                 href="#/"
                 onClick={(e) => {
                   e.preventDefault();
-                  onPageChange?.('buy-rice');
+                  navigate('buy-rice');
                 }}
               >
                 <i className="align-middle" data-feather="shopping-cart"></i>{' '}
@@ -109,9 +148,16 @@ export default function Layout({ children, currentEmail, onLogout, onPageChange,
       <div className="main">
         {/* Navbar */}
         <nav className="navbar navbar-expand navbar-light navbar-bg">
-          <a className="sidebar-toggle js-sidebar-toggle">
+          <button
+            type="button"
+            className="sidebar-toggle js-sidebar-toggle border-0 bg-transparent p-0"
+            aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+            aria-controls="sidebar"
+            aria-expanded={isSidebarOpen}
+            onClick={() => setIsSidebarOpen((v) => !v)}
+          >
             <i className="hamburger align-self-center"></i>
-          </a>
+          </button>
 
           <div className="navbar-collapse collapse">
             <ul className="navbar-nav navbar-align">
